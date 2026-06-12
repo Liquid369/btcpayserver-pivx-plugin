@@ -1,0 +1,15 @@
+@using BTCPayServer.Abstractions.Extensions
+@model BTCPayServer.Components.MainNav.MainNavViewModel
+@{
+    var store = Model.Store;
+}
+@if (store != null)
+{
+    <li class="nav-item">
+        <a asp-controller="PivxStore" asp-action="GetStorePivxPaymentMethod" asp-route-storeId="@store.Id"
+           class="nav-link @ViewData.ActivePageClass("PIVX", $"{store.Id}-PIVX")" id="StoreNav-PIVX">
+            <img src="~/pivx.svg" alt="PIVX" style="width:20px;height:20px;margin-right:8px;vertical-align:middle;" />
+            <span>PIVX</span>
+        </a>
+    </li>
+}

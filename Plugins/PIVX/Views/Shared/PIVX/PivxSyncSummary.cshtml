@@ -1,0 +1,17 @@
+@using BTCPayServer.Plugins.PIVX.Services
+@inject PivxSyncSummaryProvider PivxSyncSummaryProvider
+
+@foreach (var status in PivxSyncSummaryProvider.GetStatuses().OfType<PivxSyncStatus>())
+{
+    var state = status.Available
+        ? status.Synced ? "enabled" : "pending"
+        : "disabled";
+    <h5 class="d-flex align-items-center fw-semibold">
+        <span class="me-2 btcpay-status btcpay-status--@state"></span>
+        PIVX
+    </h5>
+    <ul>
+        <li>Node available: @status.Available</li>
+        <li>Synced: @status.Synced (@status.CurrentHeight / @status.TargetHeight)</li>
+    </ul>
+}

@@ -1,0 +1,22 @@
+# BTCPayServer-docker custom fragment for the PIVX plugin.
+#
+# This assumes pivxd runs natively on the host (recommended — there is no
+# maintained official PIVX docker image). It injects the plugin's environment
+# variables into the btcpayserver container and maps host.docker.internal to
+# the docker host so the container can reach the daemon.
+#
+# Install:
+#   cp pivx.custom.yml btcpayserver-docker/docker-compose-generator/docker-fragments/
+#   export BTCPAYGEN_ADDITIONAL_FRAGMENTS="$BTCPAYGEN_ADDITIONAL_FRAGMENTS;pivx.custom"
+#   . ./btcpay-setup.sh -i
+services:
+  btcpayserver:
+    environment:
+      BTCPAY_PIVX_DAEMON_URI: http://host.docker.internal:51473
+      BTCPAY_PIVX_RPCUSER: rpc
+      # Change this and keep it in sync with ~/.pivx/pivx.conf on the host
+      BTCPAY_PIVX_RPCPASSWORD: CHANGE_ME_STRONG_PASSWORD
+      # Optional confirmation floor; 0 = follow the store's speed policy
+      BTCPAY_PIVX_MINCONF: "0"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

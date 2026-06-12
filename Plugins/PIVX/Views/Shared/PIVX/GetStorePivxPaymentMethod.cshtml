@@ -1,0 +1,114 @@
+@using BTCPayServer.Plugins.PIVX.Controllers
+@model PivxStoreController.PivxPaymentMethodViewModel
+
+@{
+    ViewData.SetActivePage("PIVX", "PIVX Settings", "PIVX");
+    Layout = "_Layout";
+}
+
+<partial name="_StatusMessage" />
+
+<div class="row">
+    <div class="col-md-8">
+        <h3 class="mb-3">PIVX Payment Method</h3>
+
+        @if (!Model.DaemonAvailable)
+        {
+            <div class="alert alert-warning">
+                <h5><i class="fa fa-exclamation-triangle"></i> PIVX Daemon Not Available</h5>
+                <p>The PIVX daemon could not be reached. Please ensure:</p>
+                <ul>
+                    <li>PIVX daemon is running</li>
+                    <li>Environment variable <code>BTCPAY_PIVX_DAEMON_URI</code> is set correctly</li>
+                    <li>RPC credentials are configured (BTCPAY_PIVX_RPCUSER, BTCPAY_PIVX_RPCPASSWORD)</li>
+                </ul>
+                <p class="mb-0"><strong>Status:</strong> @Model.DaemonInfo</p>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-success">
+                <h5><i class="fa fa-check-circle"></i> PIVX Daemon Connected</h5>
+                <p class="mb-0">@Model.DaemonInfo</p>
+            </div>
+        }
+
+        <form method="post" asp-action="UpdateStorePivxPaymentMethod" asp-route-storeId="@ViewContext.RouteData.Values["storeId"]">
+            <div class="form-group">
+                <div class="form-check">
+                    <input asp-for="Enabled" type="checkbox" class="form-check-input" />
+                    <label asp-for="Enabled" class="form-check-label">
+                        Enable PIVX payments for this store
+                    </label>
+                </div>
+                <span class="form-text text-muted">
+                    Allow customers to pay invoices using PIVX (transparent and shielded addresses supported).
+                </span>
+            </div>
+
+            <div class="form-group">
+                <div class="form-check">
+                    <input asp-for="UseShieldedAddresses" type="checkbox" class="form-check-input" />
+                    <label asp-for="UseShieldedAddresses" class="form-check-label">
+                        Use shielded (SHIELD/Sapling) addresses for invoices
+                    </label>
+                </div>
+                <span class="form-text text-muted">
+                    Invoices will receive a private Sapling address (ps...) instead of a transparent one (D...).
+                </span>
+            </div>
+
+            <div class="mt-4">
+                <h5>How It Works</h5>
+                <ul>
+                    <li>PIVX addresses are generated automatically from your PIVX daemon wallet</li>
+                    <li>Both transparent (D...) and shielded (ps...) addresses are supported</li>
+                    <li>Payments are detected automatically by monitoring the blockchain</li>
+                    <li>Required confirmations follow the store's transaction speed policy; <code>BTCPAY_PIVX_MINCONF</code> sets an optional floor</li>
+                </ul>
+            </div>
+
+            <div class="form-group mt-4">
+                <button type="submit" class="btn btn-primary" id="save">
+                    <span>Save</span>
+                </button>
+            </div>
+        </form>
+
+        <div class="mt-5">
+            <h5>Configuration Reference</h5>
+            <p>The following environment variables configure the PIVX daemon connection:</p>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Variable</th>
+                        <th>Description</th>
+                        <th>Default</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>BTCPAY_PIVX_DAEMON_URI</code></td>
+                        <td>PIVX daemon RPC endpoint</td>
+                        <td><code>http://localhost:51473</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>BTCPAY_PIVX_RPCUSER</code></td>
+                        <td>RPC username</td>
+                        <td><code>rpc</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>BTCPAY_PIVX_RPCPASSWORD</code></td>
+                        <td>RPC password</td>
+                        <td>(required)</td>
+                    </tr>
+                    <tr>
+                        <td><code>BTCPAY_PIVX_MINCONF</code></td>
+                        <td>Optional confirmation floor (0 = follow store speed policy)</td>
+                        <td><code>0</code></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

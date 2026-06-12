@@ -1,0 +1,60 @@
+@using System.Globalization
+@using BTCPayServer.Services
+@using BTCPayServer.Services.Invoices
+@using BTCPayServer.Payments
+@using BTCPayServer.Plugins.PIVX
+@using BTCPayServer.Plugins.PIVX.Payments
+@inject DisplayFormatter DisplayFormatter
+@inject TransactionLinkProviders TransactionLinkProviders
+@inject PaymentMethodHandlerDictionary Handlers
+@model BTCPayServer.Models.InvoicingModels.InvoiceDetailsModel
+
+@{
+    var pivxPayments = Model.Payments.Select(payment =>
+    {
+        if (!Handlers.TryGetValue(payment.PaymentMethodId, out var h) || h is not PivxPaymentMethodHandler handler)
+            return null;
+
+        var data = (PivxPaymentData)handler.ParsePaymentDetails(payment.Details);
+        return new
+        {
+            Destination = payment.Destination,
+            Amount = payment.Value.ToString(CultureInfo.InvariantCulture),
+            Currency = payment.Currency,
+            TransactionId = data.TransactionId,
+            TransactionLink = data.TransactionId is null ? null : TransactionLinkProviders.GetTransactionLink(payment.PaymentMethodId, data.TransactionId),
+            Confirmations = data.ConfirmationCount,
+            Shielded = data.IsShielded
+        };
+    }).Where(p => p != null).ToList();
+}
+
+@if (pivxPayments.Any())
+{
+    <section class="mt-3">
+        <h5>PIVX Payments</h5>
+        <table class="table table-hover">
+            <thead>
+            <tr>
+                <th class="w-175px">Destination</th>
+                <th class="text-nowrap">Transaction</th>
+                <th class="text-end">Confirmations</th>
+                <th class="w-150px text-end">Paid</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var p in pivxPayments)
+            {
+                <tr>
+                    <td><vc:truncate-center text="@p!.Destination" classes="truncate-center-id" /></td>
+                    <td><vc:truncate-center text="@p.TransactionId" link="@p.TransactionLink" classes="truncate-center-id" /></td>
+                    <td class="text-end">@p.Confirmations</td>
+                    <td class="payment-value text-end text-nowrap">
+                        <span data-sensitive class="text-success">@DisplayFormatter.Currency(p.Amount, p.Currency)</span>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </section>
+}

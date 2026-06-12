@@ -17,9 +17,10 @@ One caveat: PIVX Core's own wallet derives with hardened steps on every level
 (m/44'/119'/account'/change'/index'), so an xpub cannot reproduce addresses from
 a PIVX Core wallet.dat, and there is no xpub export RPC anyway. Watch-only
 works with wallets that use the common non-hardened BIP44 layout, such as
-MyPIVXWallet or hardware wallets. The settings page should display the first
-derived address so the owner can compare it against their wallet before going
-live.
+MyPIVXWallet or hardware wallets. PIVX Core wallet owners who want watch-only
+should use the shielded mode below, whose viewing keys export from Core
+directly. The settings page displays the first derived address so the owner
+can compare it against their wallet before going live.
 
 The derivation index has to be persisted per store and incremented atomically,
 since invoice creation can run concurrently. Address gap limits also apply:

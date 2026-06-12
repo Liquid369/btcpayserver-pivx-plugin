@@ -1,0 +1,28 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - run: dotnet publish Plugins/PIVX/BTCPayServer.Plugins.PIVX.csproj -c Release -o publish
+      - run: dotnet run --project btcpayserver/BTCPayServer.PluginPacker -c Release -- publish BTCPayServer.Plugins.PIVX packed
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            packed/BTCPayServer.Plugins.PIVX/*/BTCPayServer.Plugins.PIVX.btcpay
+            packed/BTCPayServer.Plugins.PIVX/*/BTCPayServer.Plugins.PIVX.btcpay.json
+            packed/BTCPayServer.Plugins.PIVX/*/SHA256SUMS

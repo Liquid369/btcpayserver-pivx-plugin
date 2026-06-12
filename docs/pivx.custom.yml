@@ -1,7 +1,7 @@
 # BTCPayServer-docker custom fragment for the PIVX plugin.
 #
-# This assumes pivxd runs natively on the host (recommended — there is no
-# maintained official PIVX docker image). It injects the plugin's environment
+# This assumes pivxd runs natively on the host. There is no
+# maintained PIVX docker image worth depending on. The fragment injects the plugin's environment
 # variables into the btcpayserver container and maps host.docker.internal to
 # the docker host so the container can reach the daemon.
 #

@@ -58,6 +58,49 @@
                 </span>
             </div>
 
+            <div class="form-group">
+                <div class="form-check">
+                    <input asp-for="WatchOnly" type="checkbox" class="form-check-input" />
+                    <label asp-for="WatchOnly" class="form-check-label">
+                        Watch-only (keys stay in your own wallet)
+                    </label>
+                </div>
+                <span class="form-text text-muted">
+                    Addresses are derived from public key material and the server cannot spend funds.
+                    Leave unchecked to use the daemon wallet.
+                </span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="AccountXpub" class="form-label">Account xpub (watch-only, transparent)</label>
+                <input asp-for="AccountXpub" class="form-control" placeholder="xpub or ToPKiB account extended public key" />
+                <span class="form-text text-muted">
+                    Derived at 0/index, non-hardened. Works with MyPIVXWallet and hardware
+                    wallets; PIVX Core desktop wallets derive differently and are not compatible.
+                </span>
+                @if (!string.IsNullOrEmpty(Model.FirstDerivedAddress))
+                {
+                    <div class="form-text">First derived address: <code>@Model.FirstDerivedAddress</code> (compare with your wallet before going live)</div>
+                }
+            </div>
+
+            <div class="form-group">
+                <label asp-for="SaplingViewingKey" class="form-label">Sapling viewing key (watch-only, shielded)</label>
+                <input asp-for="SaplingViewingKey" class="form-control" placeholder="pxviews1..." />
+                <span class="form-text text-muted">
+                    Export with <code>exportsaplingviewingkey</code> from your wallet.
+                    Requires the pivx-walletd service (BTCPAY_PIVX_WALLETD_URI).
+                </span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="ViewingKeyBirthHeight" class="form-label">Viewing key birth height</label>
+                <input asp-for="ViewingKeyBirthHeight" class="form-control" type="number" placeholder="0" />
+                <span class="form-text text-muted">
+                    Block height the key was created at. The daemon rescans from here when the key is first imported.
+                </span>
+            </div>
+
             <div class="mt-4">
                 <h5>How It Works</h5>
                 <ul>
@@ -106,6 +149,11 @@
                         <td><code>BTCPAY_PIVX_MINCONF</code></td>
                         <td>Optional confirmation floor (0 = follow store speed policy)</td>
                         <td><code>0</code></td>
+                    </tr>
+                    <tr>
+                        <td><code>BTCPAY_PIVX_WALLETD_URI</code></td>
+                        <td>pivx-walletd endpoint, needed for watch-only shielded payments</td>
+                        <td>(optional)</td>
                     </tr>
                 </tbody>
             </table>

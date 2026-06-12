@@ -1,8 +1,9 @@
-# Watch-only mode (planned)
+# Watch-only mode
 
-The plugin currently generates invoice addresses from the daemon wallet, which
-means spending keys live on the server. Watch-only mode will let a store keep
-keys in its own wallet and give BTCPay only public key material.
+By default the plugin generates invoice addresses from the daemon wallet, which
+means spending keys live on the server. Watch-only mode lets a store keep keys
+in its own wallet and give BTCPay only public key material. Enable it per store
+under Store Settings > PIVX.
 
 ## Transparent
 
@@ -51,8 +52,17 @@ Roughly half of diversifier indexes are invalid, so the service returns the
 first valid index at or after the requested one, and the plugin stores that
 index plus one as the next cursor.
 
-## Integration order
+## Configuration summary
 
-1. Transparent xpub support in the plugin (pure .NET, NBitcoin handles BIP32).
-2. Shielded support through pivx-walletd, added to the docker fragment as one
-   more container on the internal network.
+Store settings: check "Watch-only", then provide an account xpub (transparent)
+or a Sapling viewing key plus its birth height (shielded). The settings page
+shows the first derived transparent address for comparison against the owner's
+wallet.
+
+Instance settings: shielded watch-only needs `BTCPAY_PIVX_WALLETD_URI` pointing
+at a pivx-walletd instance. The docker fragment in this directory includes the
+container; remove it if no store uses shielded watch-only.
+
+The derivation cursors are stored in BTCPay's settings table per store
+(`PIVX_WATCHONLY_T_{storeId}` and `PIVX_WATCHONLY_S_{storeId}`) and advance
+under a lock so concurrent invoices cannot reuse an address.

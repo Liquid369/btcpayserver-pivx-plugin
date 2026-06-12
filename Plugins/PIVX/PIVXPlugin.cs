@@ -35,6 +35,11 @@ public class PivxPlugin : BaseBTCPayServerPlugin
         services.AddHttpClient<PivxRpcClient>()
                 .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(30));
 
+        // Watch-only support: xpub derivation + pivx-walletd for shield addresses
+        services.AddHttpClient<PivxWalletdClient>()
+                .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(10));
+        services.AddSingleton<PivxWatchOnlyService>();
+
         // Payment method handler
         services.AddSingleton<IPaymentMethodHandler, PivxPaymentMethodHandler>();
 

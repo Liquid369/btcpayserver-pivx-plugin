@@ -213,7 +213,18 @@ public class PivxService : BackgroundService
 
     private async Task<List<Receipt>> GetShieldedReceipts(string address, CancellationToken ct)
     {
-        var received = await _rpc.ListReceivedByShieldAddressAsync(address, 0, ct);
+        List<PivxRpcClient.ShieldRecv>? received;
+        try
+        {
+            received = await _rpc.ListReceivedByShieldAddressAsync(address, 0, ct);
+        }
+        // For watch-only stores the wallet only learns a diversified address
+        // once a note for it arrives; until then the daemon rejects the query.
+        catch (Exception ex) when (ex.Message.Contains("does not belong"))
+        {
+            return new List<Receipt>();
+        }
+
         return (received ?? new List<PivxRpcClient.ShieldRecv>())
             .Where(r => r.change is not true)
             .Select(r => new Receipt($"{r.txid}-{r.outindex ?? 0}", r.txid, r.outindex ?? 0, r.amount, r.confirmations))

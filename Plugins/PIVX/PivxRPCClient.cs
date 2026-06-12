@@ -72,11 +72,15 @@ public class PivxRpcClient
     public Task<decimal> GetReceivedByAddressAsync(string addr, int minconf, CancellationToken ct = default)
         => CallAsync<decimal>("getreceivedbyaddress", ct, addr, minconf);
 
+    // watchonly_config=2 includes watch-only outputs alongside regular ones
     public Task<List<UnspentOutput>> ListUnspentAsync(string addr, int minconf = 0, int maxconf = 9999999, CancellationToken ct = default)
-        => CallAsync<List<UnspentOutput>>("listunspent", ct, minconf, maxconf, new[] { addr });
+        => CallAsync<List<UnspentOutput>>("listunspent", ct, minconf, maxconf, new[] { addr }, 2);
 
     public Task<WalletTransaction> GetTransactionAsync(string txid, CancellationToken ct = default)
-        => CallAsync<WalletTransaction>("gettransaction", ct, txid);
+        => CallAsync<WalletTransaction>("gettransaction", ct, txid, true);
+
+    public Task<object?> ImportAddressAsync(string address, string label = "", bool rescan = false, CancellationToken ct = default)
+        => CallAsync<object?>("importaddress", ct, address, label, rescan);
 
     public Task<BlockchainInfo> GetBlockchainInfoAsync(CancellationToken ct = default)
         => CallAsync<BlockchainInfo>("getblockchaininfo", ct);

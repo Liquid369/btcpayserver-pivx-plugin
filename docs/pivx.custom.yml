@@ -18,5 +18,14 @@ services:
       BTCPAY_PIVX_RPCPASSWORD: CHANGE_ME_STRONG_PASSWORD
       # Optional confirmation floor; 0 = follow the store's speed policy
       BTCPAY_PIVX_MINCONF: "0"
+      # Used by stores with watch-only shielded payments. Remove this and the
+      # pivx_walletd service below if you do not need that feature.
+      BTCPAY_PIVX_WALLETD_URI: http://pivx_walletd:8333
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  pivx_walletd:
+    restart: unless-stopped
+    image: ghcr.io/liquid369/pivx-walletd:0.1.0
+    expose:
+      - "8333"

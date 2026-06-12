@@ -7,6 +7,7 @@ using BTCPayServer.Data;
 using BTCPayServer.Filters;
 using BTCPayServer.Payments;
 using BTCPayServer.Plugins.PIVX.Payments;
+using BTCPayServer.Plugins.PIVX.Services;
 using BTCPayServer.Services;
 using BTCPayServer.Services.Invoices;
 using BTCPayServer.Services.Stores;
@@ -77,9 +78,24 @@ namespace BTCPayServer.Plugins.PIVX.Controllers
                 CryptoCode = "PIVX",
                 Enabled = existingConfig != null && !excludeFilter.Match(pmi),
                 UseShieldedAddresses = existingConfig?.UseShieldedAddresses is true,
+                WatchOnly = existingConfig?.AddressSource == PivxAddressSource.WatchOnly,
+                AccountXpub = existingConfig?.AccountXpub ?? "",
+                SaplingViewingKey = existingConfig?.SaplingViewingKey ?? "",
                 DaemonAvailable = daemonAvailable,
                 DaemonInfo = blockchainInfo
             };
+
+            if (vm.WatchOnly && !vm.UseShieldedAddresses && !string.IsNullOrWhiteSpace(vm.AccountXpub))
+            {
+                try
+                {
+                    vm.FirstDerivedAddress = PivxWatchOnlyService.DeriveTransparentAddress(vm.AccountXpub, 0);
+                }
+                catch
+                {
+                    // shown as invalid on save instead
+                }
+            }
 
             return View("~/Views/Shared/PIVX/GetStorePivxPaymentMethod.cshtml", vm);
         }
@@ -93,20 +109,67 @@ namespace BTCPayServer.Plugins.PIVX.Controllers
 
             if (viewModel.Enabled)
             {
-                // Enable PIVX payment method
-                _logger.LogInformation("Enabling PIVX payment method for store {StoreId}", store.Id);
-                
-                store.SetPaymentMethodConfig(_handlers[pmi], new PivxPaymentMethodConfig
+                var config = new PivxPaymentMethodConfig
                 {
-                    UseShieldedAddresses = viewModel.UseShieldedAddresses
-                });
+                    UseShieldedAddresses = viewModel.UseShieldedAddresses,
+                    AddressSource = viewModel.WatchOnly ? PivxAddressSource.WatchOnly : PivxAddressSource.DaemonWallet,
+                    AccountXpub = string.IsNullOrWhiteSpace(viewModel.AccountXpub) ? null : viewModel.AccountXpub.Trim(),
+                    SaplingViewingKey = string.IsNullOrWhiteSpace(viewModel.SaplingViewingKey) ? null : viewModel.SaplingViewingKey.Trim()
+                };
 
-                // Remove from excluded payment methods
+                if (viewModel.WatchOnly && !viewModel.UseShieldedAddresses)
+                {
+                    try
+                    {
+                        PivxWatchOnlyService.DeriveTransparentAddress(config.AccountXpub ?? "", 0);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        TempData.SetStatusMessageModel(new StatusMessageModel
+                        {
+                            Severity = StatusMessageModel.StatusSeverity.Error,
+                            Message = StringLocalizer["Invalid account xpub: {0}", ex.Message].Value
+                        });
+                        return RedirectToAction(nameof(GetStorePivxPaymentMethod), new { storeId = store.Id });
+                    }
+                }
+
+                if (viewModel.WatchOnly && viewModel.UseShieldedAddresses)
+                {
+                    if (config.SaplingViewingKey?.StartsWith("pxview") is not true)
+                    {
+                        TempData.SetStatusMessageModel(new StatusMessageModel
+                        {
+                            Severity = StatusMessageModel.StatusSeverity.Error,
+                            Message = StringLocalizer["A Sapling extended full viewing key (pxviews1...) is required for watch-only shielded payments"].Value
+                        });
+                        return RedirectToAction(nameof(GetStorePivxPaymentMethod), new { storeId = store.Id });
+                    }
+
+                    // Imports are idempotent; rescan runs in the daemon when the
+                    // key is new and can take a while, so do it off-request.
+                    var vkey = config.SaplingViewingKey;
+                    var height = viewModel.ViewingKeyBirthHeight;
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _pivxRpcClient.ImportSaplingViewingKeyAsync(vkey, true, height);
+                            _logger.LogInformation("Imported sapling viewing key for store {StoreId}", store.Id);
+                        }
+                        catch (System.Exception ex)
+                        {
+                            _logger.LogError(ex, "Sapling viewing key import failed for store {StoreId}", store.Id);
+                        }
+                    });
+                }
+
+                _logger.LogInformation("Enabling PIVX payment method for store {StoreId}", store.Id);
+                store.SetPaymentMethodConfig(_handlers[pmi], config);
                 blob.SetExcluded(pmi, false);
             }
             else
             {
-                // Disable PIVX payment method
                 _logger.LogInformation("Disabling PIVX payment method for store {StoreId}", store.Id);
                 blob.SetExcluded(pmi, true);
             }
@@ -128,6 +191,11 @@ namespace BTCPayServer.Plugins.PIVX.Controllers
             public string CryptoCode { get; set; } = "PIVX";
             public bool Enabled { get; set; }
             public bool UseShieldedAddresses { get; set; }
+            public bool WatchOnly { get; set; }
+            public string AccountXpub { get; set; } = "";
+            public string SaplingViewingKey { get; set; } = "";
+            public int? ViewingKeyBirthHeight { get; set; }
+            public string? FirstDerivedAddress { get; set; }
             public bool DaemonAvailable { get; set; }
             public string DaemonInfo { get; set; } = "";
         }

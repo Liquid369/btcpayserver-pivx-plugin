@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using BTCPayServer.Data;
 using BTCPayServer.Payments;
+using BTCPayServer.Plugins.PIVX.Services;
 using BTCPayServer.Services.Invoices;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
@@ -15,6 +16,8 @@ public class PivxPaymentMethodHandler : IPaymentMethodHandler
 {
     private readonly PivxRpcClient _rpc;
     private readonly PivxLikeSpecificBtcPayNetwork _network;
+    private readonly PivxWatchOnlyService _watchOnly;
+    private readonly PivxWalletdClient _walletd;
     private readonly ILogger<PivxPaymentMethodHandler> _logger;
 
     public PaymentMethodId PaymentMethodId { get; }
@@ -23,10 +26,14 @@ public class PivxPaymentMethodHandler : IPaymentMethodHandler
     public PivxPaymentMethodHandler(
         PivxRpcClient rpc,
         PivxLikeSpecificBtcPayNetwork network,
+        PivxWatchOnlyService watchOnly,
+        PivxWalletdClient walletd,
         ILogger<PivxPaymentMethodHandler> logger)
     {
         _rpc = rpc;
         _network = network;
+        _watchOnly = watchOnly;
+        _walletd = walletd;
         _logger = logger;
         PaymentMethodId = PaymentTypes.CHAIN.GetPaymentMethodId(_network.CryptoCode);
         Serializer = BlobSerializer.CreateSerializer((NBitcoin.Network?)null).Serializer;
@@ -46,9 +53,21 @@ public class PivxPaymentMethodHandler : IPaymentMethodHandler
 
         try
         {
-            var paymentAddress = config.UseShieldedAddresses
-                ? await _rpc.GetNewShieldAddressAsync()
-                : await _rpc.GetNewAddressAsync($"invoice-{invoice.Id}");
+            string paymentAddress;
+            if (config.AddressSource == PivxAddressSource.WatchOnly)
+            {
+                paymentAddress = config.UseShieldedAddresses
+                    ? await _watchOnly.ReserveShieldAddressAsync(invoice.StoreId, config.SaplingViewingKey
+                        ?? throw new InvalidOperationException("Watch-only shielded store has no viewing key configured"))
+                    : await _watchOnly.ReserveTransparentAddressAsync(invoice.StoreId, config.AccountXpub
+                        ?? throw new InvalidOperationException("Watch-only store has no xpub configured"));
+            }
+            else
+            {
+                paymentAddress = config.UseShieldedAddresses
+                    ? await _rpc.GetNewShieldAddressAsync()
+                    : await _rpc.GetNewAddressAsync($"invoice-{invoice.Id}");
+            }
 
             _logger.LogInformation("Generated PIVX address for invoice {InvoiceId}: {Address}", invoice.Id, paymentAddress);
 
@@ -116,6 +135,38 @@ public class PivxPaymentMethodHandler : IPaymentMethodHandler
             _logger.LogWarning(ex, "PIVX daemon connection failed during validation");
             validationContext.ModelState.AddModelError(nameof(config), $"PIVX daemon connection failed: {ex.Message}");
             return;
+        }
+
+        if (config.AddressSource == PivxAddressSource.WatchOnly)
+        {
+            if (config.UseShieldedAddresses)
+            {
+                if (string.IsNullOrWhiteSpace(config.SaplingViewingKey) || !config.SaplingViewingKey.StartsWith("pxview"))
+                {
+                    validationContext.ModelState.AddModelError(nameof(config.SaplingViewingKey),
+                        "Watch-only shielded payments need a Sapling extended full viewing key (pxviews1...)");
+                    return;
+                }
+                if (!await _walletd.HealthyAsync())
+                {
+                    validationContext.ModelState.AddModelError(nameof(config.SaplingViewingKey),
+                        "pivx-walletd is unreachable. Set BTCPAY_PIVX_WALLETD_URI and make sure the service is running.");
+                    return;
+                }
+            }
+            else
+            {
+                try
+                {
+                    PivxWatchOnlyService.DeriveTransparentAddress(config.AccountXpub ?? "", 0);
+                }
+                catch (Exception ex)
+                {
+                    validationContext.ModelState.AddModelError(nameof(config.AccountXpub),
+                        $"Invalid account xpub: {ex.Message}");
+                    return;
+                }
+            }
         }
 
         validationContext.Config = JToken.FromObject(config, Serializer);

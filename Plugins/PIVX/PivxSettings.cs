@@ -8,6 +8,9 @@ public class PivxSettings
     public string? RpcUser { get; set; }
     public string? RpcPassword { get; set; }
 
+    // pivx-walletd endpoint, needed for shielded watch-only stores
+    public string? WalletdUri { get; set; }
+
     // Optional floor on confirmations before a payment settles.
     // 0 = follow the store's transaction speed policy.
     public int MinConfirmations { get; set; }
@@ -15,9 +18,10 @@ public class PivxSettings
     public void NormalizeFromEnv()
     {
         string? E(string k) => Environment.GetEnvironmentVariable($"BTCPAY_PIVX_{k}");
-        DaemonUri   ??= Environment.GetEnvironmentVariable("BTCPAY_PIVX_DAEMON_URI") ?? E("DAEMON_URI");
-        RpcUser     ??= Environment.GetEnvironmentVariable("BTCPAY_PIVX_RPCUSER")    ?? E("RPCUSER");
-        RpcPassword ??= Environment.GetEnvironmentVariable("BTCPAY_PIVX_RPCPASSWORD") ?? E("RPCPASSWORD");
+        DaemonUri   ??= E("DAEMON_URI");
+        RpcUser     ??= E("RPCUSER");
+        RpcPassword ??= E("RPCPASSWORD");
+        WalletdUri  ??= E("WALLETD_URI");
 
         if (int.TryParse(E("MINCONF") ?? "", out var c)) MinConfirmations = c;
     }

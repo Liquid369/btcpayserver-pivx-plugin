@@ -56,9 +56,13 @@ public class PivxPlugin : BaseBTCPayServerPlugin
         services.AddSingleton<PivxSyncSummaryProvider>();
         services.AddSingleton<ISyncSummaryProvider>(provider => provider.GetRequiredService<PivxSyncSummaryProvider>());
 
+        // Wallet balance for the store dashboard
+        services.AddSingleton<PivxBalanceProvider>();
+
         // UI extensions
         services.AddUIExtension("store-integrations-nav", "PIVX/PivxNav");
         services.AddUIExtension("store-invoices-payments", "PIVX/ViewPivxPaymentData");
+        services.AddUIExtension("dashboard", "PIVX/PivxDashboardBalance");
     }
 
     class SimpleTransactionLinkProvider : DefaultTransactionLinkProvider

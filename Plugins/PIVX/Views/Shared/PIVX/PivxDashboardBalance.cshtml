@@ -1,0 +1,40 @@
+@using BTCPayServer.Payments
+@using BTCPayServer.Plugins.PIVX.Services
+@inject PivxBalanceProvider PivxBalanceProvider
+@inject BTCPayServer.Services.Invoices.PaymentMethodHandlerDictionary Handlers
+@model BTCPayServer.Models.StoreViewModels.StoreDashboardViewModel
+@{
+    var store = Context.GetStoreData();
+    var pmi = PaymentTypes.CHAIN.GetPaymentMethodId("PIVX");
+    var enabled = store != null
+        && store.GetPaymentMethodConfig(pmi) != null
+        && !store.GetStoreBlob().GetExcludedPaymentMethods().Match(pmi);
+}
+@if (enabled)
+{
+    var balance = PivxBalanceProvider.GetBalance();
+    <div id="PivxWalletBalance-@Model.StoreId" class="widget store-wallet-balance">
+        <div class="d-flex gap-3 align-items-center justify-content-between mb-2">
+            <h6>PIVX Wallet Balance</h6>
+        </div>
+        <header class="mb-3">
+            @if (balance.Available)
+            {
+                <div class="balance d-flex align-items-baseline gap-1">
+                    <h3 class="d-inline-block me-1" data-sensitive>@balance.Total.ToString("0.########")</h3>
+                    <span class="text-secondary fw-semibold currency">PIVX</span>
+                </div>
+                @if (balance.Shield > 0)
+                {
+                    <div class="text-secondary" data-sensitive>
+                        @balance.Transparent.ToString("0.########") transparent, @balance.Shield.ToString("0.########") shield
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-secondary">PIVX daemon unavailable</div>
+            }
+        </header>
+    </div>
+}

@@ -82,6 +82,9 @@ public class PivxRpcClient
     public Task<object?> ImportAddressAsync(string address, string label = "", bool rescan = false, CancellationToken ct = default)
         => CallAsync<object?>("importaddress", ct, address, label, rescan);
 
+    public Task<decimal> GetBalanceAsync(int minconf = 0, bool includeWatchonly = true, bool includeDelegated = true, bool includeShield = true, CancellationToken ct = default)
+        => CallAsync<decimal>("getbalance", ct, minconf, includeWatchonly, includeDelegated, includeShield);
+
     public Task<BlockchainInfo> GetBlockchainInfoAsync(CancellationToken ct = default)
         => CallAsync<BlockchainInfo>("getblockchaininfo", ct);
 

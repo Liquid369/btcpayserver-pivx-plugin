@@ -26,6 +26,7 @@ namespace BTCPayServer.Plugins.PIVX.Controllers
         private readonly PivxRpcClient _pivxRpcClient;
         private readonly PaymentMethodHandlerDictionary _handlers;
         private readonly StoreRepository _storeRepository;
+        private readonly PivxBalanceProvider _balanceProvider;
         private readonly ILogger<PivxStoreController> _logger;
         private IStringLocalizer StringLocalizer { get; }
 
@@ -33,14 +34,25 @@ namespace BTCPayServer.Plugins.PIVX.Controllers
             PivxRpcClient pivxRpcClient,
             PaymentMethodHandlerDictionary handlers,
             StoreRepository storeRepository,
+            PivxBalanceProvider balanceProvider,
             ILogger<PivxStoreController> logger,
             IStringLocalizer stringLocalizer)
         {
             _pivxRpcClient = pivxRpcClient;
             _handlers = handlers;
             _storeRepository = storeRepository;
+            _balanceProvider = balanceProvider;
             _logger = logger;
             StringLocalizer = stringLocalizer;
+        }
+
+        [HttpGet("histogram/{type}")]
+        public IActionResult Histogram(string type)
+        {
+            var histogram = _balanceProvider.GetHistogram(type);
+            if (histogram is null)
+                return NotFound();
+            return Json(new { labels = histogram.Labels, series = histogram.Series, balance = histogram.Balance });
         }
 
         private StoreData StoreData => HttpContext.GetStoreData();

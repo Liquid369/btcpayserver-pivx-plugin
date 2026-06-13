@@ -85,6 +85,9 @@ public class PivxRpcClient
     public Task<decimal> GetBalanceAsync(int minconf = 0, bool includeWatchonly = true, bool includeDelegated = true, bool includeShield = true, CancellationToken ct = default)
         => CallAsync<decimal>("getbalance", ct, minconf, includeWatchonly, includeDelegated, includeShield);
 
+    public Task<List<TxListEntry>> ListTransactionsAsync(int count = 10000, int from = 0, bool includeWatchonly = true, CancellationToken ct = default)
+        => CallAsync<List<TxListEntry>>("listtransactions", ct, "*", count, from, includeWatchonly);
+
     public Task<BlockchainInfo> GetBlockchainInfoAsync(CancellationToken ct = default)
         => CallAsync<BlockchainInfo>("getblockchaininfo", ct);
 
@@ -119,6 +122,15 @@ public class PivxRpcClient
         public string? blockhash { get; set; }
         public long? blocktime { get; set; }
         public long time { get; set; }
+    }
+
+    public record TxListEntry
+    {
+        public string category { get; set; } = "";
+        public decimal amount { get; set; }
+        public decimal? fee { get; set; }
+        public long time { get; set; }
+        public int confirmations { get; set; }
     }
 
     public record ShieldRecv
